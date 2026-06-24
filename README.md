@@ -187,6 +187,22 @@ kuksa-mcp --transport sse
 python examples/local_test.py
 ```
 
+## Docker
+
+The server is published as a Docker image on [GitHub Container Registry](https://ghcr.io/mikehaller/kuksa-mcp-server):
+
+```bash
+docker pull ghcr.io/mikehaller/kuksa-mcp-server:latest
+
+# Run with SSE transport
+docker run --rm -p 8765:8765 \
+  -e KUKSA_HOST=host.docker.internal \
+  ghcr.io/mikehaller/kuksa-mcp-server:latest \
+  --transport sse --host 0.0.0.0 --port 8765
+```
+
+The image uses a non-root `kuksa` user and is built from `python:3.12-slim` (~200 MB).
+
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE).
