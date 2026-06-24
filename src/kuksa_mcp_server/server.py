@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import io
 import logging
 import os
 import signal
 import sys
-import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -49,39 +47,6 @@ def configure_logging(log_file: str | None = None) -> None:
 @dataclass
 class AppContext:
     _kuksa_client: KuksaDatabrokerClient | None
-
-
-def _install_stdin_guard() -> None:
-    """Filter blank lines from stdin so stray Enter presses don't break the MCP protocol.
-
-    Runs a daemon thread that reads the original stdin byte-stream, skips
-    empty/whitespace-only lines, and writes the rest into a pipe that replaces
-    sys.stdin.
-    """
-    r_fd, w_fd = os.pipe()
-    original_buf = sys.stdin.buffer
-
-    def _forward() -> None:
-        try:
-            for line in original_buf:
-                if line.strip():
-                    os.write(w_fd, line)
-        except ValueError:
-            pass
-        finally:
-            try:
-                os.close(w_fd)
-            except OSError:
-                pass
-
-    t = threading.Thread(target=_forward, daemon=True)
-    t.start()
-
-    sys.stdin = io.TextIOWrapper(
-        io.BufferedReader(os.fdopen(r_fd, "rb")),
-        encoding="utf-8",
-        errors="replace",
-    )
 
 
 def create_server(
@@ -134,9 +99,6 @@ def run_server(
     configure_logging(log_file)
     mcp = create_server(config, host=host, port=port)
     _install_signal_handlers()
-
-    if transport == "stdio":
-        _install_stdin_guard()
 
     try:
         mcp.run(transport=transport)
