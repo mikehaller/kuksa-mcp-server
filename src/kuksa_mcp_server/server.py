@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import os
+import signal
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -42,9 +44,13 @@ def create_server(
         except Exception:
             logger.warning("Could not connect to Kuksa Databroker at %s", config.address)
             client = None
-        yield AppContext(_kuksa_client=client)
-        if client:
-            await client.disconnect()
+        try:
+            yield AppContext(_kuksa_client=client)
+        finally:
+            if client:
+                _log("Shutting down Kuksa Databroker client...")
+                await client.disconnect()
+                _log("Disconnected.")
 
     mcp = FastMCP(
         "Kuksa Databroker MCP Server",
@@ -66,7 +72,37 @@ def run_server(
     config: KuksaConfig | None = None,
 ) -> None:
     mcp = create_server(config, host=host, port=port)
-    mcp.run(transport=transport)
+
+    _install_signal_handlers()
+
+    try:
+        mcp.run(transport=transport)
+    except KeyboardInterrupt:
+        _log("\nReceived Ctrl-C, shutting down gracefully...")
+        _log("Goodbye.")
+        # Force exit in case the lifespan cleanup hung
+        os._exit(0)
+
+
+def _install_signal_handlers() -> None:
+    """Install handlers that translate signals to KeyboardInterrupt.
+
+    On the first SIGINT/SIGTERM the running asyncio loop gets a
+    KeyboardInterrupt which triggers the lifespan cleanup.
+    A second signal forces immediate exit.
+    """
+
+    def _force_exit(signum: int, _frame: Any) -> None:
+        _log(f"Received signal {signum}, force exiting.")
+        os._exit(1)
+
+    def _handler(signum: int, frame: Any) -> None:
+        signal.signal(signal.SIGINT, _force_exit)
+        signal.signal(signal.SIGTERM, _force_exit)
+        raise KeyboardInterrupt()
+
+    signal.signal(signal.SIGINT, _handler)
+    signal.signal(signal.SIGTERM, _handler)
 
 
 def _print_startup_banner() -> None:
