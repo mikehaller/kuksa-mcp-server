@@ -19,6 +19,7 @@ The Kuksa Databroker is an in-vehicle data broker that implements the [COVESA Ve
 
 - **[Getting Started](getting-started.md)** — Installation, configuration, and quick start
 - **[Architecture](architecture.md)** — Project architecture, data flow, and design decisions
+- **[API Coverage](api-coverage.md)** — MCP tool coverage vs. Kuksa Databroker gRPC API
 
 ## Supported VSS Signals
 

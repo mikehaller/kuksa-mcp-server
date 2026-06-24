@@ -4,6 +4,7 @@ import logging
 import os
 import signal
 import sys
+import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -41,6 +42,7 @@ def configure_logging(log_file: str | None = None) -> None:
         logger.addHandler(fh)
 
     logger.setLevel(logging.INFO)
+    logger.propagate = False
     _log_handler_configured = True
 
 
