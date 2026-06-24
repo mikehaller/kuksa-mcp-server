@@ -7,13 +7,15 @@ A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that co
 
 ## Features
 
-- **Read vehicle signals** — Get current values of any VSS signal (speed, doors, battery, etc.)
+- **Read signals** — Get current or target values of any VSS signal
 - **Batch reads** — Fetch multiple signals in a single call
-- **Write actuators** — Set target values for actuators and attributes
-- **Browse the VSS tree** — List signals and their metadata under any branch
-- **Server introspection** — Get connection and server info
-- **Dual transport** — stdio (default, for Claude Desktop/Cursor/OpenCode) and SSE (for HTTP clients)
-- **OpenCode ready** — Works out of the box with [OpenCode](https://opencode.ai) CLI
+- **Write actuators** — Set actuator targets or publish sensor readings
+- **Browse the VSS tree** — List or count signals under any branch, with substring filtering
+- **Inspect types** — Query data types for any signal path
+- **Server introspection** — Name, version, signal count at startup
+- **Per-request logging** — Every tool call logged with params, timing, and result summary
+- **Dual transport** — stdio (default) and SSE (HTTP)
+- **OpenCode ready** — Pre-configured `opencode.jsonc` for local and remote variants
 
 ## Quick Start
 
@@ -42,8 +44,6 @@ kuksa-mcp
 
 ### 3. Configure your MCP client
 
-Add to your MCP client configuration:
-
 <details>
 <summary>Claude Desktop / Cursor (<code>claude_desktop_config.json</code>)</summary>
 
@@ -59,7 +59,7 @@ Add to your MCP client configuration:
 </details>
 
 <details>
-<summary>OpenCode — stdio variant (<code>opencode.json</code> in project root)</summary>
+<summary>OpenCode — stdio variant (<code>opencode.jsonc</code> in project root)</summary>
 
 ```json
 {
@@ -76,7 +76,7 @@ Add to your MCP client configuration:
 </details>
 
 <details>
-<summary>OpenCode — SSE variant (<code>opencode.json</code> in project root)</summary>
+<summary>OpenCode — SSE variant (<code>opencode.jsonc</code> in project root)</summary>
 
 ```json
 {
@@ -84,7 +84,7 @@ Add to your MCP client configuration:
     "kuksa-remote": {
       "type": "remote",
       "url": "http://127.0.0.1:8765/sse",
-      "enabled": true,
+      "enabled": false,
       "timeout": 10000
     }
   }
@@ -94,52 +94,39 @@ Add to your MCP client configuration:
 
 ## OpenCode MCP Server Variants
 
-The project includes two pre-configured MCP server entries in `opencode.jsonc`:
+The project ships with two entries in `opencode.jsonc`:
 
-### `kuksa-local` (stdio)
+| Variant | Transport | Default | Use case |
+|---------|-----------|---------|----------|
+| `kuksa-local` | stdio (subprocess) | enabled | Local dev, single-user, auto-managed |
+| `kuksa-remote` | SSE (HTTP) | disabled | Multi-user, containerized, remote databroker |
 
-- **Transport**: stdio — the server runs as a subprocess of OpenCode
-- **Default**: enabled
-- **When to use**: local development, single-user setup, low latency
-- **How it works**: OpenCode spawns `kuksa-mcp` directly, communicates over stdin/stdout
-- **Pros**: no network ports, auto-start/stop with OpenCode, simplest setup
-- **Cons**: only works on the machine where the venv and Kuksa Databroker are running
+Start the remote variant manually:
+```bash
+kuksa-mcp --transport sse --host 0.0.0.0 --port 8765
+```
 
-### `kuksa-remote` (SSE)
+## CLI Reference
 
-- **Transport**: SSE (HTTP Server-Sent Events) — the server runs independently
-- **Default**: disabled (enable by setting `"enabled": true`)
-- **When to use**: multi-user access, containerized deployment, remote databroker
-- **How it works**: start the server manually with `kuksa-mcp --transport sse`, OpenCode connects via HTTP
-- **Pros**: can run on a different machine, survives client restarts
-- **Cons**: requires manual start/stop, port must be accessible, slightly higher latency
+```
+kuksa-mcp [options]
 
-### Choosing between them
+Options:
+  --transport <stdio|sse>   Transport protocol (default: stdio)
+  --host <ip>               Bind address for SSE (default: 127.0.0.1)
+  --port <port>             Port for SSE (default: 8765)
+  --kuksa-host <host>       Databroker host (overrides KUKSA_HOST env)
+  --kuksa-port <port>       Databroker port (overrides KUKSA_PORT env)
+  --log-file <path>         File path for request logging (also written to stderr)
+```
 
-| Situation | Use |
-|-----------|-----|
-| You're developing locally on the same machine | `kuksa-local` |
-| You want OpenCode to auto-manage the server | `kuksa-local` |
-| The server runs in a Docker/remote host | `kuksa-remote` |
-| Multiple clients need the same server | `kuksa-remote` |
-| You're testing or debugging the MCP server | `kuksa-local` |
-
-## Configuration
-
-All settings are configurable via environment variables:
+## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `KUKSA_HOST` | `127.0.0.1` | Kuksa Databroker host |
 | `KUKSA_PORT` | `55555` | Kuksa Databroker gRPC port |
 | `KUKSA_TOKEN` | *(none)* | JWT token for authorization |
-
-Or via CLI flags:
-
-```bash
-kuksa-mcp --transport sse --host 0.0.0.0 --port 8765 \
-  --kuksa-host 192.168.1.100 --kuksa-port 55555
-```
 
 ## Tools
 
@@ -149,33 +136,54 @@ kuksa-mcp --transport sse --host 0.0.0.0 --port 8765 \
 | `get_signals(paths)` | Kuksa V2 | Get current values of multiple signals |
 | `set_signal(path, value, datatype)` | Kuksa V2 | Set an actuator target value |
 | `publish_value(path, value, datatype)` | Kuksa V2 | Publish a sensor reading (provider role) |
-| `list_signals(branch, query)` | V1 (deprecated) | List signals and metadata under a VSS branch |
-| `count_signals(branch, query)` | V1 (deprecated) | Count signals under a branch |
+| `list_signals(branch, query)` | V1 (deprecated) | List signals and metadata under a branch |
+| `count_signals(branch, query)` | V1 (deprecated) | Count signals matching a filter |
 | `get_target_values(paths)` | V1 (deprecated) | Read actuator target/desired values |
-| `get_value_types(paths)` | V1 (deprecated) | Get data types for signals |
-| `server_info()` | V1 (deprecated) | Get databroker server information |
+| `get_value_types(paths)` | V1 (deprecated) | Get data types for one or more signals |
+| `server_info()` | V1 (deprecated) | Get databroker name, version, address |
 
 ## Resources
 
 | URI | Description |
 |-----|-------------|
-| `kuksa://signals/{path}` | Read signal value and metadata |
-| `kuksa://branches/{path}` | List signals under a VSS branch |
-| `kuksa://info` | Server connection information |
+| `kuksa://info` | Server and tool reference |
+| `kuksa://signals/{path}` | Signal info (redirects to tool) |
+| `kuksa://branches/{path}` | Branch listing (redirects to tool) |
+
+## Startup Output
+
+On startup the server prints a banner with version, databroker info, and catalog stats:
+
+```
+======================================================
+  Kuksa Databroker MCP Server
+  Version : 0.1.0
+  Built   : 2026-06-24
+======================================================
+  Backend : databroker
+  Address : 127.0.0.1:55555
+  Version : 0.7.0-dev.0
+  Status  : connected
+  Signals : 1263 total
+  Types   : ACTUATOR=643, ATTRIBUTE=130, SENSOR=490
+======================================================
+```
+
+Every tool call is logged:
+
+```
+09:45:12 [INFO] Processing request of type ListToolsRequest
+09:45:12 [INFO] Processing request of type CallToolRequest
+09:45:12 [INFO] get_signal(args={'path': 'Vehicle.Speed'}) -> ok [0.023s]
+09:45:15 [INFO] list_signals(args={'branch': 'Vehicle.Cabin', 'query': ''}) -> 490 results [0.045s]
+```
 
 ## Development
 
 ```bash
-# Install with dev dependencies
 pip install -e ".[dev]"
-
-# Run tests
 pytest
-
-# Run with SSE transport for testing
 kuksa-mcp --transport sse
-
-# Run local test against Ollama
 python examples/local_test.py
 ```
 
