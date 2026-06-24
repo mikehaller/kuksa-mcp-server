@@ -3,6 +3,7 @@
 Usage:
     kuksa-mcp                          # stdio transport (default)
     kuksa-mcp --transport sse          # SSE transport
+    kuksa-mcp --log-file server.log    # write request logs to file
     kuksa-mcp --transport sse --host 0.0.0.0 --port 8765
 """
 
@@ -47,6 +48,11 @@ def main() -> None:
         default=None,
         help="Kuksa Databroker port (overrides KUKSA_PORT env)",
     )
+    parser.add_argument(
+        "--log-file",
+        default=None,
+        help="Path to file for request logging (also written to stderr)",
+    )
 
     args = parser.parse_args()
 
@@ -61,6 +67,7 @@ def main() -> None:
         host=args.host,
         port=args.port,
         config=config,
+        log_file=args.log_file,
     )
 
 
