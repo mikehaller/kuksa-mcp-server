@@ -91,10 +91,36 @@ class KuksaDatabrokerClient:
         return results
 
     async def get_server_info(self) -> dict[str, Any]:
-        _ = self._ensure_client()
+        c = self._ensure_client()
+        try:
+            info = await c.get_server_info()
+        except Exception:
+            return {
+                "name": "Kuksa Databroker",
+                "address": self._config.address,
+                "version": "",
+            }
         return {
-            "name": "Kuksa Databroker",
+            "name": info.name or "Kuksa Databroker",
+            "version": info.version or "",
             "address": self._config.address,
+        }
+
+    async def get_signal_stats(self) -> dict[str, Any]:
+        """Count signals and collect catalog stats."""
+        raw = await self._ensure_client().get_metadata(["Vehicle"])
+        total = len(raw)
+        entry_types: dict[str, int] = {}
+        datatypes: dict[str, int] = {}
+        for _, meta in raw.items():
+            et = str(meta.entry_type) if meta.entry_type else "unknown"
+            dt = str(meta.data_type) if meta.data_type else "unknown"
+            entry_types[et] = entry_types.get(et, 0) + 1
+            datatypes[dt] = datatypes.get(dt, 0) + 1
+        return {
+            "total_signals": total,
+            "entry_types": entry_types,
+            "data_types": datatypes,
         }
 
     def _ensure_client(self) -> VSSClient:
