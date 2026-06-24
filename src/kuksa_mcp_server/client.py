@@ -75,10 +75,12 @@ class KuksaDatabrokerClient:
         await self._ensure_client().set_target_values({path: dp})
         return {"path": path, "value": value, "datatype": datatype, "status": "set"}
 
-    async def list_signals(self, branch: str = "Vehicle") -> list[dict[str, Any]]:
+    async def list_signals(self, branch: str = "Vehicle", query: str = "") -> list[dict[str, Any]]:
         raw = await self._ensure_client().get_metadata([branch])
         results: list[dict[str, Any]] = []
         for path, meta in raw.items():
+            if query and query.lower() not in path.lower():
+                continue
             results.append({
                 "path": path,
                 "data_type": str(meta.data_type) if meta.data_type else None,

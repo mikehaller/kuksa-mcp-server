@@ -61,16 +61,21 @@ def register_tools(mcp: Any) -> None:
             return str(e)
 
     @mcp.tool()
-    async def list_signals(branch: str = "Vehicle", ctx: Context = None) -> list[dict[str, Any]] | str:
-        """List all signals and their metadata under a given VSS branch.
+    async def list_signals(branch: str = "Vehicle", query: str = "", ctx: Context = None) -> list[dict[str, Any]] | str:
+        """List signals and their metadata under a given VSS branch, with optional substring filtering.
+
+        Use 'branch' to scope the search (e.g. 'Vehicle.Cabin' returns only cabin signals).
+        Use 'query' to filter results by substring match on the signal path (case-insensitive).
+        Leave both empty or use 'Vehicle' for the full tree.
 
         Args:
             branch: VSS branch path (e.g. 'Vehicle', 'Vehicle.Cabin', 'Vehicle.Powertrain').
+            query: Optional substring to filter signal paths (e.g. 'Speed', 'Door', 'Temperature').
         """
         c = _client(ctx)
         if c is None:
             return "Not connected to Kuksa Databroker"
-        return await c.list_signals(branch)
+        return await c.list_signals(branch, query)
 
     @mcp.tool()
     async def server_info(ctx: Context = None) -> dict[str, Any] | str:
