@@ -75,6 +75,12 @@ class KuksaDatabrokerClient:
         await self._ensure_client().set_target_values({path: dp})
         return {"path": path, "value": value, "datatype": datatype, "status": "set"}
 
+    async def count_signals(self, branch: str = "Vehicle", query: str = "") -> int:
+        raw = await self._ensure_client().get_metadata([branch])
+        if not query:
+            return len(raw)
+        return sum(1 for path in raw if query.lower() in path.lower())
+
     async def list_signals(self, branch: str = "Vehicle", query: str = "") -> list[dict[str, Any]]:
         raw = await self._ensure_client().get_metadata([branch])
         results: list[dict[str, Any]] = []

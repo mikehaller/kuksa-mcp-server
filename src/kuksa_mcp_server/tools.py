@@ -118,6 +118,26 @@ def register_tools(mcp: Any) -> None:
         return result
 
     @mcp.tool()
+    async def count_signals(branch: str = "Vehicle", query: str = "", ctx: Context = None) -> int | str:
+        """Count signals under a VSS branch, with optional substring filtering.
+
+        Same search parameters as list_signals, but returns only the count.
+        Useful for quickly checking how many signals exist without fetching details.
+
+        Args:
+            branch: VSS branch path (e.g. 'Vehicle', 'Vehicle.Cabin', 'Vehicle.Powertrain').
+            query: Optional substring to filter signal paths (e.g. 'Speed', 'Door', 'Temperature').
+        """
+        t0 = time.perf_counter()
+        c = _client(ctx)
+        if c is None:
+            _log_call("count_signals", {"branch": branch, "query": query}, "Not connected", time.perf_counter() - t0)
+            return "Not connected to Kuksa Databroker"
+        count = await c.count_signals(branch, query)
+        _log_call("count_signals", {"branch": branch, "query": query}, f"{count} signals", time.perf_counter() - t0)
+        return count
+
+    @mcp.tool()
     async def server_info(ctx: Context = None) -> dict[str, Any] | str:
         """Get information about the connected Kuksa Databroker server."""
         t0 = time.perf_counter()

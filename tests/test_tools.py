@@ -14,7 +14,7 @@ def test_tools_are_registered(server):
     """Verify all expected tools are registered with correct names."""
     tools = server._tool_manager.list_tools()
     names = {t.name for t in tools}
-    expected = {"get_signal", "get_signals", "set_signal", "list_signals", "server_info"}
+    expected = {"get_signal", "get_signals", "set_signal", "list_signals", "count_signals", "server_info"}
     assert expected.issubset(names), f"Missing tools: {expected - names}"
 
 
