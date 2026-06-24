@@ -75,6 +75,23 @@ class KuksaDatabrokerClient:
         await self._ensure_client().set_target_values({path: dp})
         return {"path": path, "value": value, "datatype": datatype, "status": "set"}
 
+    async def get_target_values(self, paths: list[str]) -> list[dict[str, Any]]:
+        raw = await self._ensure_client().get_target_values(paths)
+        return [
+            {"path": path, "value": dp.value, "timestamp": dp.timestamp.isoformat() if dp.timestamp else None}
+            for path, dp in raw.items()
+        ]
+
+    async def publish_value(self, path: str, value: Any, datatype: str = "string") -> dict[str, Any]:
+        now = datetime.now(timezone.utc)
+        dp = KuksaDatapoint(value, now)
+        await self._ensure_client().set_current_values({path: dp})
+        return {"path": path, "value": value, "datatype": datatype, "status": "published"}
+
+    async def get_value_types(self, paths: list[str]) -> list[dict[str, Any]]:
+        raw = await self._ensure_client().get_value_types(paths)
+        return [{"path": path, "data_type": dt.name if dt else None} for path, dt in raw.items()]
+
     async def count_signals(self, branch: str = "Vehicle", query: str = "") -> int:
         raw = await self._ensure_client().get_metadata([branch])
         if not query:

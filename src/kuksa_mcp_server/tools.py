@@ -138,6 +138,75 @@ def register_tools(mcp: Any) -> None:
         return count
 
     @mcp.tool()
+    async def get_target_values(paths: list[str], ctx: Context = None) -> list[dict[str, Any]] | str:
+        """Get the target (desired) values of actuator signals.
+
+        The target value is the value the actuator *should* assume,
+        as opposed to the current (sensed) value returned by get_signal.
+
+        Args:
+            paths: List of VSS signal paths (e.g. ['Vehicle.Body.Windshield.Front.Wiping.System.TargetPosition']).
+        """
+        t0 = time.perf_counter()
+        c = _client(ctx)
+        if c is None:
+            _log_call("get_target_values", {"paths": paths}, "Not connected", time.perf_counter() - t0)
+            return "Not connected to Kuksa Databroker"
+        result = await c.get_target_values(paths)
+        _log_call("get_target_values", {"paths": paths}, result, time.perf_counter() - t0)
+        return result
+
+    @mcp.tool()
+    async def publish_value(
+        path: str,
+        value: Any,
+        datatype: str = "string",
+        ctx: Context = None,
+    ) -> dict[str, Any] | str:
+        """Publish a current value for a signal (provider role).
+
+        Unlike set_signal which sets the *target* for an actuator,
+        publish_value directly sets the *current* value as reported
+        by a sensor or provider. Use this when you are acting as a
+        data provider feeding sensor readings into the databroker.
+
+        Args:
+            path: VSS signal path (e.g. 'Vehicle.Speed').
+            value: The current value to publish.
+            datatype: The data type ('string', 'bool', 'int32', 'int64', 'uint32', 'uint64', 'float', 'double').
+        """
+        t0 = time.perf_counter()
+        c = _client(ctx)
+        if c is None:
+            _log_call("publish_value", {"path": path, "datatype": datatype}, "Not connected", time.perf_counter() - t0)
+            return "Not connected to Kuksa Databroker"
+        try:
+            result = await c.publish_value(path, value, datatype)
+            _log_call("publish_value", {"path": path, "datatype": datatype}, result, time.perf_counter() - t0)
+            return result
+        except KuksaDatabrokerError as e:
+            _log_call("publish_value", {"path": path, "datatype": datatype}, f"error: {e}", time.perf_counter() - t0)
+            return str(e)
+
+    @mcp.tool()
+    async def get_value_types(paths: list[str], ctx: Context = None) -> list[dict[str, Any]] | str:
+        """Get the data types of one or more VSS signals.
+
+        Useful for determining how to interpret or set a signal value.
+
+        Args:
+            paths: List of VSS signal paths (e.g. ['Vehicle.Speed', 'Vehicle.Cabin.Door.Row1.Left.IsOpen']).
+        """
+        t0 = time.perf_counter()
+        c = _client(ctx)
+        if c is None:
+            _log_call("get_value_types", {"paths": paths}, "Not connected", time.perf_counter() - t0)
+            return "Not connected to Kuksa Databroker"
+        result = await c.get_value_types(paths)
+        _log_call("get_value_types", {"paths": paths}, result, time.perf_counter() - t0)
+        return result
+
+    @mcp.tool()
     async def server_info(ctx: Context = None) -> dict[str, Any] | str:
         """Get information about the connected Kuksa Databroker server."""
         t0 = time.perf_counter()
