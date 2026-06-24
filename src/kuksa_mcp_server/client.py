@@ -83,8 +83,8 @@ class KuksaDatabrokerClient:
                 continue
             results.append({
                 "path": path,
-                "data_type": str(meta.data_type) if meta.data_type else None,
-                "entry_type": str(meta.entry_type) if meta.entry_type else None,
+                "data_type": meta.data_type.name if meta.data_type else None,
+                "entry_type": meta.entry_type.name if meta.entry_type else None,
                 "description": meta.description or "",
                 "unit": meta.unit or "",
             })
@@ -113,8 +113,8 @@ class KuksaDatabrokerClient:
         entry_types: dict[str, int] = {}
         datatypes: dict[str, int] = {}
         for _, meta in raw.items():
-            et = str(meta.entry_type) if meta.entry_type else "unknown"
-            dt = str(meta.data_type) if meta.data_type else "unknown"
+            et = meta.entry_type.name if meta.entry_type else "UNKNOWN"
+            dt = meta.data_type.name if meta.data_type else "UNKNOWN"
             entry_types[et] = entry_types.get(et, 0) + 1
             datatypes[dt] = datatypes.get(dt, 0) + 1
         return {

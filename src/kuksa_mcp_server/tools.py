@@ -1,10 +1,32 @@
 from __future__ import annotations
 
+import logging
+import time
 from typing import Any
 
 from mcp.server.fastmcp import Context
 
 from kuksa_mcp_server.client import KuksaDatabrokerClient, KuksaDatabrokerError
+
+logger = logging.getLogger("kuksa-mcp-server")
+
+
+def _log_call(name: str, args: dict[str, Any], result: Any, elapsed: float) -> None:
+    if isinstance(result, list):
+        summary = f"{len(result)} results"
+    elif isinstance(result, dict):
+        summary = result.get("status", "ok")
+    elif isinstance(result, str):
+        summary = result
+    else:
+        summary = "ok"
+    logger.info(
+        "%s(args=%s) -> %s [%.3fs]",
+        name,
+        args,
+        summary,
+        elapsed,
+    )
 
 
 def register_tools(mcp: Any) -> None:
@@ -18,12 +40,17 @@ def register_tools(mcp: Any) -> None:
         Args:
             path: VSS signal path (e.g. 'Vehicle.Speed', 'Vehicle.Cabin.Door.Row1.Left.IsOpen').
         """
+        t0 = time.perf_counter()
         c = _client(ctx)
         if c is None:
+            _log_call("get_signal", {"path": path}, "Not connected", time.perf_counter() - t0)
             return "Not connected to Kuksa Databroker"
         try:
-            return await c.get_value(path)
+            result = await c.get_value(path)
+            _log_call("get_signal", {"path": path}, result, time.perf_counter() - t0)
+            return result
         except KuksaDatabrokerError as e:
+            _log_call("get_signal", {"path": path}, f"error: {e}", time.perf_counter() - t0)
             return str(e)
 
     @mcp.tool()
@@ -33,10 +60,14 @@ def register_tools(mcp: Any) -> None:
         Args:
             paths: List of VSS signal paths (e.g. ['Vehicle.Speed', 'Vehicle.Cabin.Door.Row1.Left.IsOpen']).
         """
+        t0 = time.perf_counter()
         c = _client(ctx)
         if c is None:
+            _log_call("get_signals", {"paths": paths}, "Not connected", time.perf_counter() - t0)
             return "Not connected to Kuksa Databroker"
-        return await c.get_values(paths)
+        result = await c.get_values(paths)
+        _log_call("get_signals", {"paths": paths}, result, time.perf_counter() - t0)
+        return result
 
     @mcp.tool()
     async def set_signal(
@@ -52,12 +83,17 @@ def register_tools(mcp: Any) -> None:
             value: The value to set (as a string representation).
             datatype: The data type of the value ('string', 'bool', 'int32', 'int64', 'uint32', 'uint64', 'float', 'double').
         """
+        t0 = time.perf_counter()
         c = _client(ctx)
         if c is None:
+            _log_call("set_signal", {"path": path, "datatype": datatype}, "Not connected", time.perf_counter() - t0)
             return "Not connected to Kuksa Databroker"
         try:
-            return await c.set_value(path, value, datatype)
+            result = await c.set_value(path, value, datatype)
+            _log_call("set_signal", {"path": path, "datatype": datatype}, result, time.perf_counter() - t0)
+            return result
         except KuksaDatabrokerError as e:
+            _log_call("set_signal", {"path": path, "datatype": datatype}, f"error: {e}", time.perf_counter() - t0)
             return str(e)
 
     @mcp.tool()
@@ -72,15 +108,23 @@ def register_tools(mcp: Any) -> None:
             branch: VSS branch path (e.g. 'Vehicle', 'Vehicle.Cabin', 'Vehicle.Powertrain').
             query: Optional substring to filter signal paths (e.g. 'Speed', 'Door', 'Temperature').
         """
+        t0 = time.perf_counter()
         c = _client(ctx)
         if c is None:
+            _log_call("list_signals", {"branch": branch, "query": query}, "Not connected", time.perf_counter() - t0)
             return "Not connected to Kuksa Databroker"
-        return await c.list_signals(branch, query)
+        result = await c.list_signals(branch, query)
+        _log_call("list_signals", {"branch": branch, "query": query}, result, time.perf_counter() - t0)
+        return result
 
     @mcp.tool()
     async def server_info(ctx: Context = None) -> dict[str, Any] | str:
         """Get information about the connected Kuksa Databroker server."""
+        t0 = time.perf_counter()
         c = _client(ctx)
         if c is None:
+            _log_call("server_info", {}, "Not connected", time.perf_counter() - t0)
             return "Not connected to Kuksa Databroker"
-        return await c.get_server_info()
+        result = await c.get_server_info()
+        _log_call("server_info", {}, result, time.perf_counter() - t0)
+        return result

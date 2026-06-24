@@ -12,7 +12,8 @@ A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that co
 - **Write actuators** — Set target values for actuators and attributes
 - **Browse the VSS tree** — List signals and their metadata under any branch
 - **Server introspection** — Get connection and server info
-- **Dual transport** — stdio (default, for Claude Desktop/Cursor) and SSE (for HTTP clients)
+- **Dual transport** — stdio (default, for Claude Desktop/Cursor/OpenCode) and SSE (for HTTP clients)
+- **OpenCode ready** — Works out of the box with [OpenCode](https://opencode.ai) CLI
 
 ## Quick Start
 
@@ -41,7 +42,10 @@ kuksa-mcp
 
 ### 3. Configure your MCP client
 
-Add to your MCP client configuration (e.g., `claude_desktop_config.json`):
+Add to your MCP client configuration:
+
+<details>
+<summary>Claude Desktop / Cursor (<code>claude_desktop_config.json</code>)</summary>
 
 ```json
 {
@@ -52,6 +56,21 @@ Add to your MCP client configuration (e.g., `claude_desktop_config.json`):
   }
 }
 ```
+</details>
+
+<details>
+<summary>OpenCode (<code>~/.config/opencode/opencode.json</code>)</summary>
+
+```json
+{
+  "mcpServers": {
+    "kuksa": {
+      "command": "kuksa-mcp"
+    }
+  }
+}
+```
+</details>
 
 ## Configuration
 

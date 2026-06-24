@@ -18,6 +18,21 @@ from .resources import register_resources
 from .tools import register_tools
 
 logger = logging.getLogger("kuksa-mcp-server")
+_log_handler_configured = False
+
+
+def _configure_logging() -> None:
+    global _log_handler_configured
+    if _log_handler_configured:
+        return
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%H:%M:%S",
+    ))
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    _log_handler_configured = True
 
 
 @dataclass
@@ -35,6 +50,7 @@ def create_server(
 
     @asynccontextmanager
     async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
+        _configure_logging()
         _print_startup_banner()
         client = KuksaDatabrokerClient(config)
         try:
