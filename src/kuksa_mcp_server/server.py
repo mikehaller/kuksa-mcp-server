@@ -43,6 +43,16 @@ def configure_logging(log_file: str | None = None) -> None:
 
     logger.setLevel(logging.INFO)
     logger.propagate = False
+
+    # Route FastMCP's internal request logging through our handlers too
+    fastmcp_logger = logging.getLogger("mcp.server.lowlevel.server")
+    fastmcp_logger.handlers.clear()
+    fastmcp_logger.addHandler(handler)
+    if log_file:
+        fastmcp_logger.addHandler(fh)
+    fastmcp_logger.setLevel(logging.INFO)
+    fastmcp_logger.propagate = False
+
     _log_handler_configured = True
 
 
@@ -102,6 +112,13 @@ def run_server(
     mcp = create_server(config, host=host, port=port)
     _install_signal_handlers()
 
+    logger.info(
+        "Starting Kuksa Databroker MCP Server v%s (built %s) on transport=%s",
+        __version__,
+        __build_date__,
+        transport,
+    )
+
     try:
         mcp.run(transport=transport)
     except KeyboardInterrupt:
@@ -152,4 +169,4 @@ def _print_catalog_stats(stats: dict[str, Any]) -> None:
 
 
 def _print_banner(msg: str) -> None:
-    print(msg, file=sys.stderr)
+    logger.info("%s", msg)

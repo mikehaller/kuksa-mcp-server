@@ -4,13 +4,13 @@
     "kuksa-local": {
       "type": "local",
       "command": [".venv/bin/python", "-m", "kuksa_mcp_server", "--log-file", "./kuksa-mcp.log"],
-      "enabled": true,
+      "enabled": false,
       "timeout": 10000
     },
     "kuksa-remote": {
       "type": "remote",
       "url": "http://127.0.0.1:8765/sse",
-      "enabled": false,
+      "enabled": true,
       "timeout": 10000
     }
   }
